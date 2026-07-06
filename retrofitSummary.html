@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>换装进度</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; padding: 20px; }
+    .container { max-width: 1000px; margin: 0 auto; }
+
+    /* ----- 导航栏样式 ----- */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      background: #ffffff;
+      padding: 12px 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      margin-bottom: 24px;
+    }
+    .nav-brand a {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a3c6e;
+      text-decoration: none;
+      letter-spacing: 1px;
+    }
+    .nav-menu {
+      list-style: none;
+      display: flex;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      flex-wrap: wrap;
+    }
+    .nav-menu li a {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      text-decoration: none;
+      font-size: 14px;
+      color: #555;
+      transition: background 0.2s;
+    }
+    .nav-menu li a:hover {
+      background: #f0f4fa;
+    }
+    .nav-menu li a.active {
+      background: #1a3c6e;
+      color: #fff;
+    }
+    @media (max-width: 600px) {
+      .top-nav {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .nav-menu {
+        justify-content: center;
+      }
+    }
+
+    /* ----- 页面原有样式 ----- */
+    .stats-card {
+      display: flex;
+      justify-content: space-around;
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .stat-item { text-align: center; }
+    .stat-item .num { font-size: 28px; font-weight: bold; color: #007aff; display: block; }
+    .stat-item .label { font-size: 14px; color: #666; }
+    .card { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .title { font-size: 20px; font-weight: 600; margin-bottom: 16px; display: block; }
+    .empty { text-align: center; color: #999; padding: 30px 0; }
+    .list-item { padding: 16px 0; border-bottom: 1px solid #eee; }
+    .list-item:last-child { border-bottom: none; }
+    .train-no { font-size: 18px; font-weight: 600; }
+    .detail { display: flex; flex-wrap: wrap; margin-top: 8px; gap: 8px 16px; }
+    .detail span { font-size: 14px; color: #666; background: #f8f9fa; padding: 2px 10px; border-radius: 12px; }
+    .toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; gap: 8px; }
+    .btn { padding: 6px 14px; border: none; border-radius: 20px; cursor: pointer; font-size: 13px; }
+    .btn-outline { background: #f0f0f0; color: #333; }
+    .btn-primary { background: #007aff; color: #fff; }
+    .btn-sm { padding: 4px 12px; }
+  </style>
+</head>
+<body>
+  <!-- ====== 导航栏 ====== -->
+  <nav class="top-nav">
+    <div class="nav-brand">
+      <a href="index.html">🚂 LKJ数据换装管控平台</a>
+    </div>
+    <ul class="nav-menu">
+      <li><a href="index.html" data-page="index">未换装汇总</a></li>
+  	  <li><a href="retrofitSummary.html" data-page="retrofitSummary">换装进度</a></li>
+      
+      </ul>
+  </nav>
+
+  <!-- ====== 页面内容 ====== -->
+  <div id="app" class="container">
+    <!-- 统计卡片 -->
+    <div class="stats-card">
+      <div class="stat-item">
+        <span class="num">{{ stats.completed }}</span>
+        <span class="label">已完成台数</span>
+      </div>
+      <div class="stat-item">
+        <span class="num">{{ stats.uncompleted }}</span>
+        <span class="label">未完成台数</span>
+      </div>
+      <div class="stat-item">
+        <span class="num">{{ stats.rate }}%</span>
+        <span class="label">完成比例</span>
+      </div>
+    </div>
+
+    <!-- 已完成换装列表 -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+        <span class="title" style="margin-bottom:0;">✅ 已完成换装列表</span>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline btn-sm" @click="loadData">刷新</button>
+          <button class="btn btn-sm" :class="sortMode === 'time' ? 'btn-primary' : 'btn-outline'" @click="sortMode='time'">按时间</button>
+          <button class="btn btn-sm" :class="sortMode === 'trainNo' ? 'btn-primary' : 'btn-outline'" @click="sortMode='trainNo'">按车号</button>
+          <button class="btn btn-sm" :class="sortMode === 'unit' ? 'btn-primary' : 'btn-outline'" @click="sortMode='unit'">按单位</button>
+        </div>
+      </div>
+      <div v-if="sortedList.length === 0" class="empty">暂无已完成记录</div>
+      <div v-for="item in sortedList" :key="item.id" class="list-item">
+        <div class="train-no">🚂 {{ item.train_no }}</div>
+        <div class="detail">
+          <span>轮径A：{{ item.wheel_a || '--' }}</span>
+          <span>轮径B：{{ item.wheel_b || '--' }}</span>
+          <span>作业：{{ item.operator || '--' }}</span>
+          <span>地点：{{ item.location || '--' }}</span>
+          <span>时间：{{ item.created_at }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+      // ... 原有的 request、base64、Vue 代码（保持不变） ...
+      // 以下是高亮导航的脚本（放在 DOM 加载后）
+      document.addEventListener('DOMContentLoaded', function() {
+        const currentPage = window.location.pathname.split('/').pop().replace('.html', '');
+        document.querySelectorAll('.nav-menu a').forEach(link => {
+          if (link.dataset.page === currentPage) {
+            link.classList.add('active');
+          }
+        });
+      });
+    </script>
+  <script>
+    // ========== API 配置 ==========
+    const DATA_APP_ID = 'dataapp-CkXLlQKQ';
+    const PUBLIC_KEY = '838OAA20';
+    const PRIVATE_KEY = '28941d11-dddd-4e10-8bff-c788a841c911';
+    const BASE_URL = `https://ap-northeast-1.data.tidbcloud.com/api/v1beta/app/${DATA_APP_ID}`;
+
+    function base64Encode(str) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+      let output = '';
+      let i = 0;
+      while (i < str.length) {
+        const c1 = str.charCodeAt(i++) & 0xff;
+        const c2 = str.charCodeAt(i++) & 0xff;
+        const c3 = str.charCodeAt(i++) & 0xff;
+        const enc1 = c1 >> 2;
+        const enc2 = ((c1 & 0x03) << 4) | (c2 >> 4);
+        let enc3 = ((c2 & 0x0f) << 2) | (c3 >> 6);
+        let enc4 = c3 & 0x3f;
+        if (isNaN(c2)) { enc3 = enc4 = 64; } else if (isNaN(c3)) { enc4 = 64; }
+        output += chars.charAt(enc1) + chars.charAt(enc2) + chars.charAt(enc3) + chars.charAt(enc4);
+      }
+      return output;
+    }
+
+    function request(options) {
+      return new Promise((resolve, reject) => {
+        const token = base64Encode(PUBLIC_KEY + ':' + PRIVATE_KEY);
+        fetch(BASE_URL + options.url, {
+          method: options.method || 'GET',
+          headers: {
+            'Authorization': 'Basic ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: options.data ? JSON.stringify(options.data) : undefined
+        })
+        .then(res => {
+          if (!res.ok) {
+            return res.json().then(data => Promise.reject({ status: res.status, data }));
+          }
+          return res.json();
+        })
+        .then(resolve)
+        .catch(reject);
+      });
+    }
+
+    function parseData(res) {
+      if (Array.isArray(res)) return res;
+      if (res && res.data && Array.isArray(res.data.rows)) return res.data.rows;
+      if (res && Array.isArray(res.data)) return res.data;
+      return [];
+    }
+
+    // 将 UTC 时间字符串转换为北京时间字符串 (YYYY-MM-DD HH:mm:ss)
+    function formatToBeijingTime(utcStr) {
+      if (!utcStr) return '';
+      const date = new Date(utcStr);
+      if (isNaN(date.getTime())) return utcStr;
+      const timestamp = date.getTime() + 8 * 60 * 60 * 1000;
+      const bjDate = new Date(timestamp);
+      const year = bjDate.getFullYear();
+      const month = String(bjDate.getMonth() + 1).padStart(2, '0');
+      const day = String(bjDate.getDate()).padStart(2, '0');
+      const hours = String(bjDate.getHours()).padStart(2, '0');
+      const minutes = String(bjDate.getMinutes()).padStart(2, '0');
+      const seconds = String(bjDate.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+
+    // ========== Vue 应用 ==========
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const stats = ref({ completed: 0, uncompleted: 0, rate: 0 });
+        const completedList = ref([]);
+        const sortMode = ref('time'); // 'trainNo' 或 'unit'
+
+        const sortedList = computed(() => {
+          const list = [...completedList.value];
+          if (sortMode.value === 'time') {
+            // 按录入时间降序（最新的在前）
+            list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          } else if (sortMode.value === 'trainNo') {
+            list.sort((a, b) => a.train_no.localeCompare(b.train_no, undefined, { numeric: true }));
+          } else if (sortMode.value === 'unit') {
+            list.sort((a, b) => {
+              const unitA = a.unit || '';
+              const unitB = b.unit || '';
+              const unitComp = unitA.localeCompare(unitB);
+              if (unitComp !== 0) return unitComp;
+              return a.train_no.localeCompare(b.train_no, undefined, { numeric: true });
+            });
+          }
+          return list;
+        });
+
+        async function loadData() {
+          try {
+            // 获取换装列表
+            const listRes = await request({ url: '/endpoint/retrofit/list', method: 'GET' });
+            let list = parseData(listRes);
+            // 转换时间
+            list = list.map(item => {
+              if (item.created_at) {
+                item.created_at = formatToBeijingTime(item.created_at);
+              }
+              return item;
+            });
+            completedList.value = list;
+
+            // 获取统计
+            const statRes = await request({ url: '/endpoint/retrofit/status', method: 'GET' });
+            if (statRes && statRes.data && Array.isArray(statRes.data.rows) && statRes.data.rows.length > 0) {
+              const s = statRes.data.rows[0];
+              stats.value.completed = Number(s.completed_trains) || 0;
+              stats.value.uncompleted = Number(s.uncompleted_trains) || 0;
+              stats.value.rate = Number(s.completion_rate) || 0;
+            } else if (statRes && statRes.data) {
+              const s = statRes.data;
+              stats.value.completed = Number(s.completed_trains) || 0;
+              stats.value.uncompleted = Number(s.uncompleted_trains) || 0;
+              stats.value.rate = Number(s.completion_rate) || 0;
+            } else {
+              console.warn('统计返回数据格式异常：', statRes);
+            }
+          } catch (e) {
+            alert('加载数据失败: ' + (e.data?.message || e.message));
+          }
+        }
+
+        onMounted(() => {
+          loadData();
+        });
+
+        return { stats, completedList, sortMode, sortedList, loadData };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
