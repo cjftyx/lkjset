@@ -110,7 +110,7 @@
     <div v-else-if="!trainInfo" class="card">
       <span class="title">🔍 请输入车号</span>
       <div class="input-group">
-        <input v-model="searchTrainNo" placeholder="例如：HXD3D-0001" @keyup.enter="checkTrain" />
+        <input v-model="searchTrainNo" placeholder="例如：37" @keyup.enter="checkTrain" />
         <button class="btn btn-primary" @click="checkTrain">确认</button>
       </div>
     </div>
@@ -303,7 +303,7 @@
           searchTrainNo.value = '';
           showPreview.value = false;
           // 如果有历史记录，可能返回上一页
-          if (document.referrer && document.referrer.includes('unretrofitSummary')) {
+          if (document.referrer && document.referrer.includes('index')) {
             window.history.back();
           }
         }
@@ -337,7 +337,7 @@
             });
             alert('提交成功！');
             // 返回上一页（如未换装汇总）
-            if (document.referrer && document.referrer.includes('unretrofitSummary')) {
+            if (document.referrer && document.referrer.includes('index')) {
               window.history.back();
             } else {
               resetForm();
