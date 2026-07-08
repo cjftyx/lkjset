@@ -9,9 +9,56 @@
     * { box-sizing: border-box; }
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; padding: 20px; }
     .container { max-width: 600px; margin: 0 auto; }
-    /* 导航栏样式保持不变（略）... */
-    .top-nav { /* 完整样式请参考原文件 */ }
-    /* 其他样式不变 */
+
+    /* 导航栏样式 */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      background: #ffffff;
+      padding: 12px 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      margin-bottom: 24px;
+    }
+    .nav-brand a {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a3c6e;
+      text-decoration: none;
+      letter-spacing: 1px;
+    }
+    .nav-menu {
+      list-style: none;
+      display: flex;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      flex-wrap: wrap;
+    }
+    .nav-menu li a {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      text-decoration: none;
+      font-size: 14px;
+      color: #555;
+      transition: background 0.2s;
+    }
+    .nav-menu li a:hover {
+      background: #f0f4fa;
+    }
+    .nav-menu li a.active {
+      background: #1a3c6e;
+      color: #fff;
+    }
+    @media (max-width: 600px) {
+      .top-nav { flex-direction: column; align-items: stretch; gap: 10px; }
+      .nav-menu { justify-content: center; }
+    }
+
+    /* 页面样式 */
     .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .title { font-size: 20px; font-weight: 600; margin-bottom: 16px; display: block; }
     .input-group { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
@@ -37,18 +84,23 @@
   </style>
 </head>
 <body>
-  <!-- 导航栏（保持不变） -->
+  <!-- 导航栏 -->
   <nav class="top-nav">
-    <div class="nav-brand"><a href="index.html">🚂 LKJ数据换装管控平台</a></div>
+    <div class="nav-brand">
+      <a href="index.html">🚂 LKJ数据换装管控平台</a>
+    </div>
     <ul class="nav-menu">
       <li><a href="index.html" data-page="index">未换装汇总</a></li>
       <li><a href="retrofitSummary.html" data-page="retrofitSummary">换装进度</a></li>
     </ul>
   </nav>
 
+  <!-- 内容 -->
   <div id="app" class="container">
+    <!-- 加载状态 -->
     <div v-if="loading" class="loading">⏳ 正在查询车号...</div>
 
+    <!-- 车号输入 -->
     <div v-else-if="!trainInfo" class="card">
       <span class="title">🔍 请输入机车号</span>
       <div class="input-group">
@@ -57,6 +109,7 @@
       </div>
     </div>
 
+    <!-- 换装表单 -->
     <div v-else class="card">
       <div class="train-header">
         <span class="train-no">🚂 {{ trainInfo.train_no }}</span>
@@ -92,6 +145,7 @@
         <input v-model="form.location" placeholder="请输入换装地点" />
       </div>
 
+      <!-- 预览 -->
       <div class="preview" v-if="showPreview">
         <p><strong>请确认以下信息：</strong></p>
         <p>车号：{{ trainInfo.train_no }}</p>
@@ -118,20 +172,66 @@
     document.addEventListener('DOMContentLoaded', function() {
       const currentPage = window.location.pathname.split('/').pop().replace('.html', '');
       document.querySelectorAll('.nav-menu a').forEach(link => {
-        if (link.dataset.page === currentPage) link.classList.add('active');
+        if (link.dataset.page === currentPage) {
+          link.classList.add('active');
+        }
       });
     });
 
-    // API 配置
+    // ========== API 配置 ==========
     const DATA_APP_ID = 'dataapp-CkXLlQKQ';
     const PUBLIC_KEY = '838OAA20';
     const PRIVATE_KEY = '28941d11-dddd-4e10-8bff-c788a841c911';
     const BASE_URL = `https://ap-northeast-1.data.tidbcloud.com/api/v1beta/app/${DATA_APP_ID}`;
 
-    function base64Encode(str) { /* 保持不变 */ }
-    function request(options) { /* 保持不变 */ }
-    function parseData(res) { /* 保持不变 */ }
+    function base64Encode(str) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+      let output = '';
+      let i = 0;
+      while (i < str.length) {
+        const c1 = str.charCodeAt(i++) & 0xff;
+        const c2 = str.charCodeAt(i++) & 0xff;
+        const c3 = str.charCodeAt(i++) & 0xff;
+        const enc1 = c1 >> 2;
+        const enc2 = ((c1 & 0x03) << 4) | (c2 >> 4);
+        let enc3 = ((c2 & 0x0f) << 2) | (c3 >> 6);
+        let enc4 = c3 & 0x3f;
+        if (isNaN(c2)) { enc3 = enc4 = 64; } else if (isNaN(c3)) { enc4 = 64; }
+        output += chars.charAt(enc1) + chars.charAt(enc2) + chars.charAt(enc3) + chars.charAt(enc4);
+      }
+      return output;
+    }
 
+    function request(options) {
+      return new Promise((resolve, reject) => {
+        const token = base64Encode(PUBLIC_KEY + ':' + PRIVATE_KEY);
+        fetch(BASE_URL + options.url, {
+          method: options.method || 'GET',
+          headers: {
+            'Authorization': 'Basic ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: options.data ? JSON.stringify(options.data) : undefined
+        })
+        .then(res => {
+          if (!res.ok) {
+            return res.json().then(data => Promise.reject({ status: res.status, data }));
+          }
+          return res.json();
+        })
+        .then(resolve)
+        .catch(reject);
+      });
+    }
+
+    function parseData(res) {
+      if (Array.isArray(res)) return res;
+      if (res && res.data && Array.isArray(res.data.rows)) return res.data.rows;
+      if (res && Array.isArray(res.data)) return res.data;
+      return [];
+    }
+
+    // ========== Vue 应用 ==========
     const { createApp, ref, onMounted } = Vue;
 
     createApp({
@@ -140,7 +240,7 @@
         const trainInfo = ref(null);
         const loading = ref(false);
         const showPreview = ref(false);
-        const isSubmitting = ref(false);  // ✅ 新增防重复状态
+        const isSubmitting = ref(false);
         const form = ref({
           wheel_a: '',
           wheel_b: '',
@@ -168,6 +268,7 @@
             const list = parseData(res);
             const found = list.find(item => item.train_no === trainNo);
             if (found) {
+              // 检查是否已换装
               const retrofitRes = await request({ url: '/endpoint/retrofit/list', method: 'GET' });
               const retrofitList = parseData(retrofitRes);
               const hasRetrofit = retrofitList.some(r => r.train_no === trainNo);
@@ -198,9 +299,10 @@
         }
 
         async function submitRetrofit() {
-          // ✅ 防止重复点击
+          // 防重复点击
           if (isSubmitting.value) return;
 
+          // 必填校验
           const errors = [];
           if (!form.value.wheel_a) errors.push('A节轮径');
           if (!form.value.start_time) errors.push('开始时间');
@@ -213,12 +315,13 @@
             return;
           }
 
+          // 第一次点击 → 显示预览
           if (!showPreview.value) {
             showPreview.value = true;
             return;
           }
 
-          // ✅ 锁定按钮
+          // 第二次点击 → 正式提交
           isSubmitting.value = true;
           try {
             await request({
@@ -240,7 +343,6 @@
           } catch (e) {
             alert('提交失败: ' + (e.data?.message || e.message));
           } finally {
-            // ✅ 解锁按钮（若页面未跳转）
             isSubmitting.value = false;
           }
         }
