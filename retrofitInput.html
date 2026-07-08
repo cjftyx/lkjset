@@ -10,7 +10,7 @@
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; padding: 20px; }
     .container { max-width: 600px; margin: 0 auto; }
 
-    /* ----- 导航栏样式 ----- */
+    /* 导航栏样式 */
     .top-nav {
       display: flex;
       justify-content: space-between;
@@ -64,7 +64,7 @@
       }
     }
 
-    /* ----- 页面原有样式 ----- */
+    /* 页面样式 */
     .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .title { font-size: 20px; font-weight: 600; margin-bottom: 16px; display: block; }
     .input-group { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
@@ -96,12 +96,11 @@
     </div>
     <ul class="nav-menu">
       <li><a href="index.html" data-page="index">未换装汇总</a></li>
-  	  <li><a href="retrofitSummary.html" data-page="retrofitSummary">换装进度</a></li>
-      
-      </ul>
+      <li><a href="retrofitSummary.html" data-page="retrofitSummary">换装进度</a></li>
+    </ul>
   </nav>
 
-  <!-- ====== 原有内容 ====== -->
+  <!-- ====== 内容 ====== -->
   <div id="app" class="container">
     <!-- 加载状态 -->
     <div v-if="loading" class="loading">⏳ 正在查询车号...</div>
@@ -123,31 +122,31 @@
       </div>
 
       <div class="form-group">
-        <label>A节轮径</label>
+        <label>A节轮径 <span style="color:red;">*</span></label>
         <input v-model="form.wheel_a" placeholder="请输入A节轮径值" />
       </div>
       <div class="form-group">
-        <label>B节轮径</label>
+        <label>B节轮径 <span style="color:#888;">(可选)</span></label>
         <input v-model="form.wheel_b" placeholder="请输入B节轮径值" />
       </div>
       <div class="form-group">
-        <label>开始时间</label>
+        <label>开始时间 <span style="color:red;">*</span></label>
         <input type="datetime-local" v-model="form.start_time" class="datetime-input" />
       </div>
       <div class="form-group">
-        <label>结束时间</label>
+        <label>结束时间 <span style="color:red;">*</span></label>
         <input type="datetime-local" v-model="form.end_time" class="datetime-input" />
       </div>
       <div class="form-group">
-        <label>作业人</label>
+        <label>作业人 <span style="color:red;">*</span></label>
         <input v-model="form.operator" placeholder="请输入作业人" />
       </div>
       <div class="form-group">
-        <label>复合人</label>
-        <input v-model="form.reviewer" placeholder="请输入复合人" />
+        <label>复核人 <span style="color:red;">*</span></label>
+        <input v-model="form.reviewer" placeholder="请输入复核人" />
       </div>
       <div class="form-group">
-        <label>换装地点</label>
+        <label>换装地点 <span style="color:red;">*</span></label>
         <input v-model="form.location" placeholder="请输入换装地点" />
       </div>
 
@@ -155,11 +154,11 @@
         <p><strong>请确认以下信息：</strong></p>
         <p>车号：{{ trainInfo.train_no }}</p>
         <p>A节轮径：{{ form.wheel_a }}</p>
-        <p>B节轮径：{{ form.wheel_b }}</p>
+        <p>B节轮径：{{ form.wheel_b || '（未填写）' }}</p>
         <p>开始时间：{{ form.start_time }}</p>
         <p>结束时间：{{ form.end_time }}</p>
         <p>作业人：{{ form.operator }}</p>
-        <p>复合人：{{ form.reviewer }}</p>
+        <p>复核人：{{ form.reviewer }}</p>
         <p>换装地点：{{ form.location }}</p>
       </div>
 
@@ -171,9 +170,8 @@
       </div>
     </div>
   </div>
-<script>
-    // ... 原有的 request、base64、Vue 代码（保持不变） ...
-    // 以下是高亮导航的脚本（放在 DOM 加载后）
+
+  <script>
     document.addEventListener('DOMContentLoaded', function() {
       const currentPage = window.location.pathname.split('/').pop().replace('.html', '');
       document.querySelectorAll('.nav-menu a').forEach(link => {
@@ -182,8 +180,7 @@
         }
       });
     });
-  </script>
-  <script>
+
     const DATA_APP_ID = 'dataapp-CkXLlQKQ';
     const PUBLIC_KEY = '838OAA20';
     const PRIVATE_KEY = '28941d11-dddd-4e10-8bff-c788a841c911';
@@ -254,13 +251,11 @@
           location: ''
         });
 
-        // 从 URL 获取参数
         function getUrlParam(name) {
           const params = new URLSearchParams(window.location.search);
           return params.get(name);
         }
 
-        // 查询车号
         async function checkTrain() {
           const trainNo = searchTrainNo.value.trim();
           if (!trainNo) {
@@ -273,7 +268,6 @@
             const list = parseData(res);
             const found = list.find(item => item.train_no === trainNo);
             if (found) {
-              // 检查是否已换装
               const retrofitRes = await request({ url: '/endpoint/retrofit/list', method: 'GET' });
               const retrofitList = parseData(retrofitRes);
               const hasRetrofit = retrofitList.some(r => r.train_no === trainNo);
@@ -285,7 +279,6 @@
               }
               trainInfo.value = found;
               showPreview.value = false;
-              // 清空表单
               form.value = { wheel_a: '', wheel_b: '', start_time: '', end_time: '', operator: '', reviewer: '', location: '' };
             } else {
               alert('无此车号，请手动输入');
@@ -297,28 +290,33 @@
           loading.value = false;
         }
 
-        // 重置表单
         function resetForm() {
           trainInfo.value = null;
           searchTrainNo.value = '';
           showPreview.value = false;
-          // 如果有历史记录，可能返回上一页
-          if (document.referrer && document.referrer.includes('index.html')) {
-            window.history.back();
-          }
+          // 返回到主页（强制）
+          window.location.href = 'index.html';
         }
 
-        // 提交换装
         async function submitRetrofit() {
-          // 校验必填
-          if (!form.value.wheel_a || !form.value.wheel_b || !form.value.start_time || !form.value.end_time) {
-            alert('请填写完整信息（轮径、开始/结束时间必填）');
+          // 必填校验
+          const errors = [];
+          if (!form.value.wheel_a) errors.push('A节轮径');
+          if (!form.value.start_time) errors.push('开始时间');
+          if (!form.value.end_time) errors.push('结束时间');
+          if (!form.value.operator) errors.push('作业人');
+          if (!form.value.reviewer) errors.push('复核人');
+          if (!form.value.location) errors.push('换装地点');
+          if (errors.length > 0) {
+            alert('请填写以下必填项：\n' + errors.join('、'));
             return;
           }
+
           if (!showPreview.value) {
             showPreview.value = true;
             return;
           }
+
           // 提交
           try {
             await request({
@@ -327,8 +325,8 @@
               data: {
                 train_no: trainInfo.value.train_no,
                 wheel_a: form.value.wheel_a,
-                wheel_b: form.value.wheel_b,
-                start_time: form.value.start_time.replace('T', ' ') + ':00', // 转换为 MySQL 格式
+                wheel_b: form.value.wheel_b || '',  // B节轮径可为空
+                start_time: form.value.start_time.replace('T', ' ') + ':00',
                 end_time: form.value.end_time.replace('T', ' ') + ':00',
                 operator: form.value.operator,
                 reviewer: form.value.reviewer,
@@ -336,18 +334,13 @@
               }
             });
             alert('提交成功！');
-            // 返回上一页（如未换装汇总）
-            if (document.referrer && document.referrer.includes('index.html')) {
-              window.history.back();
-            } else {
-              resetForm();
-            }
+            // 强制跳转到主页
+            window.location.href = 'index.html';
           } catch (e) {
             alert('提交失败: ' + (e.data?.message || e.message));
           }
         }
 
-        // 初始化：如果 URL 有 train_no 参数，自动查询
         onMounted(() => {
           const trainNoParam = getUrlParam('train_no');
           if (trainNoParam) {
